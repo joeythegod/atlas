@@ -643,9 +643,12 @@ export default function Home() {
         : fallbackTripOptions;
       setOptions(data);
       setStep("hotel");
-    } catch {
+    } catch (e: unknown) {
+      const err = e as { status?: number; message?: string };
+      const msg = err?.message ?? String(e);
+      console.error("generateTripOptions failed:", err?.status, msg);
       setStep("input");
-      alert("Something went wrong. Please try again.");
+      alert(`Error ${err?.status ?? ""}: ${msg}`);
     }
   };
 

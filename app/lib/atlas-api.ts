@@ -90,6 +90,21 @@ For each hotel include:
   return toolUse.input as TripOptions;
 }
 
+export async function testApiKey(apiKey: string): Promise<{ ok: boolean; error?: string }> {
+  const client = getClient(apiKey);
+  try {
+    await client.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 10,
+      messages: [{ role: "user", content: "hi" }],
+    });
+    return { ok: true };
+  } catch (e: unknown) {
+    const err = e as { status?: number; message?: string; error?: { error?: { message?: string } } };
+    return { ok: false, error: err?.message ?? String(e) };
+  }
+}
+
 // ─── Validate trip selections ─────────────────────────────────────────────────
 export async function validateTrip(
   apiKey: string,
