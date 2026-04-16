@@ -64,6 +64,12 @@ function ApiKeyGate({ onKey, onSkip }: { onKey: (key: string) => void; onSkip: (
           Your key stays in this browser session only — never stored or sent anywhere except Anthropic.{" "}
           <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" className="underline">Get a key ↗</a>
         </p>
+        <button
+          onClick={onSkip}
+          className="w-full mt-3 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          Skip — use demo data instead
+        </button>
       </div>
     </div>
   );
