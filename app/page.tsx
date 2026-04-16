@@ -706,7 +706,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex items-start justify-center pt-10 px-4 pb-20"
          style={{ background: "var(--cream)" }}>
-      {!apiKey && <ApiKeyGate onKey={setApiKey} onSkip={() => setApiKey("")} />}
+      {apiKey === null && <ApiKeyGate onKey={setApiKey} onSkip={() => setApiKey("")} />}
       <div className="w-full max-w-lg">
         <Header />
         {step !== "input" && step !== "loading" && <ProgressBar step={visibleStep} />}
