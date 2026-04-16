@@ -15,7 +15,7 @@ import { generateTripOptions, validateTrip, fallbackTripOptions } from "./lib/at
 const SESSION_KEY = "atlas_anthropic_key";
 
 // ─── API Key Gate ─────────────────────────────────────────────────────────────
-function ApiKeyGate({ onKey }: { onKey: (key: string) => void }) {
+function ApiKeyGate({ onKey, onSkip }: { onKey: (key: string) => void; onSkip: () => void }) {
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
 
@@ -32,8 +32,10 @@ function ApiKeyGate({ onKey }: { onKey: (key: string) => void }) {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center px-4 z-50"
-         style={{ background: "rgba(13,27,42,0.7)", backdropFilter: "blur(4px)" }}>
-      <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl">
+         style={{ background: "rgba(13,27,42,0.7)", backdropFilter: "blur(4px)" }}
+         onClick={onSkip}>
+      <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl"
+           onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-[#0d1b2a] flex items-center justify-center text-[#e8a020] text-xl font-bold">✦</div>
           <div>
@@ -698,7 +700,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex items-start justify-center pt-10 px-4 pb-20"
          style={{ background: "var(--cream)" }}>
-      {!apiKey && <ApiKeyGate onKey={setApiKey} />}
+      {!apiKey && <ApiKeyGate onKey={setApiKey} onSkip={() => setApiKey("")} />}
       <div className="w-full max-w-lg">
         <Header />
         {step !== "input" && step !== "loading" && <ProgressBar step={visibleStep} />}
