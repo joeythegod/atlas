@@ -247,7 +247,7 @@ function HotelImage({ query, name, tier }: { query: string; name: string; tier: 
     luxury: "from-amber-800 to-yellow-600",
   };
 
-  const src = `https://source.unsplash.com/featured/800x352/?${encodeURIComponent(query)}`;
+  const src = `https://loremflickr.com/800/352/${query.split(" ").join(",")}`;
 
   return (
     <div className="relative w-full h-44">
@@ -312,14 +312,8 @@ function HotelStep({
             onClick={() => onSelect(hotel)}
           >
             {/* Hotel image */}
-            <div className="relative h-44 bg-gray-100 overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`https://source.unsplash.com/featured/800x352/?${encodeURIComponent(hotel.image_query)}`}
-                alt={hotel.name}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
+            <div className="relative overflow-hidden">
+              <HotelImage query={hotel.image_query} name={hotel.name} tier={hotel.tier} />
               {/* Tier badge overlaid on image */}
               <span className={`absolute top-3 left-3 text-[10px] font-bold px-2 py-1 rounded-full shadow ${tierColors[hotel.tier]}`}>
                 {hotel.tier.toUpperCase()}
