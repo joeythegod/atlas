@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Hotel,
   Flight,
@@ -10,6 +10,62 @@ import {
   ValidationResult,
   ItineraryDay,
 } from "./types";
+import { generateTripOptions, validateTrip, fallbackTripOptions } from "./lib/atlas-api";
+
+const SESSION_KEY = "atlas_anthropic_key";
+
+// ─── API Key Gate ─────────────────────────────────────────────────────────────
+function ApiKeyGate({ onKey }: { onKey: (key: string) => void }) {
+  const [value, setValue] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = value.trim();
+    if (!trimmed.startsWith("sk-ant-")) {
+      setError("Anthropic keys start with sk-ant-");
+      return;
+    }
+    sessionStorage.setItem(SESSION_KEY, trimmed);
+    onKey(trimmed);
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center px-4 z-50"
+         style={{ background: "rgba(13,27,42,0.7)", backdropFilter: "blur(4px)" }}>
+      <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-[#0d1b2a] flex items-center justify-center text-[#e8a020] text-xl font-bold">✦</div>
+          <div>
+            <h2 className="font-bold text-[#0d1b2a]">Atlas</h2>
+            <p className="text-xs text-gray-500">Enter your Anthropic API key to start</p>
+          </div>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <input
+            type="password"
+            placeholder="sk-ant-..."
+            value={value}
+            onChange={(e) => { setValue(e.target.value); setError(""); }}
+            className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#1a6b72]"
+            autoFocus
+          />
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <button
+            type="submit"
+            className="w-full bg-[#0d1b2a] text-white font-semibold py-3 rounded-lg hover:bg-[#1a3a5c] transition-colors"
+          >
+            Start Planning →
+          </button>
+        </form>
+        <p className="text-[11px] text-gray-400 mt-4 text-center">
+          Your key stays in this browser session only — never stored or sent anywhere except Anthropic.{" "}
+          <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" className="underline">Get a key ↗</a>
+        </p>
+      </div>
+    </div>
+  );
+}
 
 // ─── Step IDs ────────────────────────────────────────────────────────────────
 type Step = "input" | "loading" | "hotel" | "flight" | "pace" | "validating" | "confirmed";
@@ -571,22 +627,26 @@ function ConfirmedStep({
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function Home() {
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("input");
   const [input, setInput] = useState<TripInput>({ destination: "", start_date: "", end_date: "", must_see: "" });
   const [options, setOptions] = useState<TripOptions | null>(null);
   const [selections, setSelections] = useState<Selections>({ hotel: null, flight: null, pace: null });
   const [conflict, setConflict] = useState<ValidationResult | null>(null);
 
+  // Restore key from sessionStorage on mount
+  useEffect(() => {
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    if (stored) setApiKey(stored);
+  }, []);
+
   const handleInputSubmit = async (tripInput: TripInput) => {
     setInput(tripInput);
     setStep("loading");
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(tripInput),
-      });
-      const data: TripOptions = await res.json();
+      const data = apiKey
+        ? await generateTripOptions(apiKey, tripInput)
+        : fallbackTripOptions;
       setOptions(data);
       setStep("hotel");
     } catch {
@@ -599,26 +659,22 @@ export default function Home() {
     if (!selections.hotel || !selections.flight || !selections.pace || !options) return;
     setStep("validating");
     try {
-      const res = await fetch("/api/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          hotel: selections.hotel,
-          flight: selections.flight,
-          pace: selections.pace,
-          itinerary_day: options.itinerary.find((d) => d.day === 1),
-        }),
-      });
-      const result: ValidationResult = await res.json();
+      const result = apiKey
+        ? await validateTrip(apiKey, {
+            hotel: selections.hotel,
+            flight: selections.flight,
+            pace: selections.pace,
+            itinerary_day: options.itinerary.find((d) => d.day === 1),
+          })
+        : { has_conflict: false, conflict_message: "", conflict_type: "none" as const };
       if (result.has_conflict) {
         setConflict(result);
-        setStep("pace"); // show conflict banner in pace step context; fix handler routes correctly
+        setStep("pace");
       } else {
         setConflict(null);
         setStep("confirmed");
       }
     } catch {
-      // Soft fail
       setStep("confirmed");
     }
   };
@@ -645,6 +701,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex items-start justify-center pt-10 px-4 pb-20"
          style={{ background: "var(--cream)" }}>
+      {!apiKey && <ApiKeyGate onKey={setApiKey} />}
       <div className="w-full max-w-lg">
         <Header />
         {step !== "input" && step !== "loading" && <ProgressBar step={visibleStep} />}
